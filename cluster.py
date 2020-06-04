@@ -27,8 +27,19 @@ warnings.filterwarnings('ignore')
 # =============================== Cluster Class ===============================
 
 class Cluster:
-
+    '''
+    Create Cluster object
+    '''
     def __init__(self, img_size=(224, 224), model_path=''):
+        """ 
+        Initializes Cluster object
+    
+        Sets image size and model to use for feature embeddings extraction
+    
+        Parameters: 
+        img_size (tuple(int,int)): default-(224,224), size of image as tuple of (width, height)
+        model_path (string): default-'', ResNet50 if '' otherwise path to custom model directory
+        """
         self.img_size = img_size
         self.model_path = model_path
         self.images = pd.Series()
@@ -44,6 +55,17 @@ class Cluster:
         self.model = Model(inputs=model.input, outputs=outputs)
 
     def vec(self, img_path):
+        """ 
+        Returns feature embeddings of an Image
+    
+        Uses model avg_pool layer if default(ResNet50) is used or layers[-1] if custom model is used to extract feature embeddings.
+    
+        Parameters:
+        img_path (string): path of image
+
+        Returns:
+        feature embeddings of image
+        """
         img = image.load_img(img_path, target_size=self.img_size)
         x = image.img_to_array(img)
         x = np.expand_dims(x, axis=0)
@@ -54,6 +76,14 @@ class Cluster:
         return self.model.predict(x)[0]
 
     def load_images(self, path):
+        """ 
+        Loads images and stores images' embeddings
+    
+        loads images for path provided and stores embeddings using <function vec>
+    
+        Parameters:
+        path (string/pd.Series): path to images directory as string or pandas series with all images path
+        """
         if type(path) == str:
             self.images = pd.Series([os.path.join(path, img) for img in os.listdir(path)])
         elif type(path) == pd.Series:
@@ -65,6 +95,14 @@ class Cluster:
         self.embeddings = np.array([self.vec(img_path) for img_path in tqdm(self.images.values)])
 
     def find_best_k(self, plot=True):
+        """ 
+        Finds optimal n_clusters
+    
+        Uses silhouette score to identify optimal n_clusters only if <function load_images> is used earlier.
+    
+        Parameters:
+        plot (boolean): default-True, To visualize silhouette score for n_cluster or not
+        """
         if len(self.images.index)==0:
             print ('Images/Embeddings not Found! Use load_images method to load and extract feature embeddings of images.')
             return
@@ -97,6 +135,14 @@ class Cluster:
         plt.show()
 
     def run_kmeans(self, n_clusters=0):
+        """ 
+        Make clusters
+    
+        Uses optimal n_clusters set by <function find_best_k> or using custom n_cluster to visualize and run further analysis
+    
+        Parameters:
+        n_clusters (int): default-0, if default optimal n is used otherwise custom n is used
+        """
         if n_clusters == 0:
             n_clusters = self.best_k
 
@@ -128,6 +174,14 @@ class Cluster:
             plt.show()
 
     def get_cluster(self, n):
+        """ 
+        Visualize a Cluster
+    
+        visualize a specific cluster using a cluster montage
+    
+        Parameters:
+        n (int): cluster to visualize
+        """
         image_set = []
         for path in self.images.loc[self.cluster_indices[n]]:
             image_set.append(cv2.cvtColor(cv2.imread(path), cv2.COLOR_BGR2RGB))
@@ -143,6 +197,16 @@ class Cluster:
             plt.show()
 
     def extract_cluster(self, n, extraction_type='copy', to='ClusterCuts' ):
+        """ 
+        Cut/Copy images of a cluster
+    
+        extract a cluster using copy or move method to a directory
+    
+        Parameters:
+        n (int): cluster to extract
+        extraction_type (string): either 'copy' cluster images or 'cut' from current directory
+        to (string): path of directory which will store extracted images
+        """
         for img_path in self.images.loc[self.cluster_indices[n]]:
             image_name = os.path.basename(img_path)
 
